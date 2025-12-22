@@ -4,44 +4,116 @@ docker --version
 docker compose version
 ```
 
-### Run PostgreSQL via Docker
+---
 
+## ⚙️ First-Time Setup (After Cloning)
+
+**IMPORTANT**: This repo does NOT include sensitive credentials. You must create them locally:
+
+```bash
+# 1. Create .env file for development
+cp .env.example .env
+# Edit .env with your dev database credentials
+
+# 2. Create database.json for migrations
+cp database.json.example database.json
+# Edit database.json with your dev database credentials
+
+# 3. Create .env.production for production (only if deploying)
+cp .env.production.example .env.production
+# Edit .env.production with your production credentials
 ```
+
+**These files are in .gitignore and will NEVER be committed.**
+
+---
+
+## 🔧 Environment Setup
+
+### **IMPORTANT: Separate Dev & Prod Databases**
+
+This project uses **different databases** for development and production:
+
+| Environment | Database Name | User | Host |
+|-------------|---------------|------|------|
+| **Development** | `t_01_enterprise_db_dev` | `dev_user` | `localhost` |
+| **Production** | `t_01_enterprise_db_prod` | `prod_user` | `postgres` (Docker) |
+
+---
+
+## 🚀 Development Setup
+
+### 1. Run PostgreSQL for Development
+
+```bash
 docker run -d \
-  --name t-01-enterprise-postgres \
-  -e POSTGRES_USER=<user> \
-  -e POSTGRES_PASSWORD=<password> \
-  -e POSTGRES_DB=t_01_enterprise_db \
+  --name t-01-enterprise-postgres-dev \
+  -e POSTGRES_USER=dev_user \
+  -e POSTGRES_PASSWORD=dev_password \
+  -e POSTGRES_DB=t_01_enterprise_db_dev \
   -p 5432:5432 \
-  -v pgdata:/var/lib/postgresql/data \
+  -v pgdata_dev:/var/lib/postgresql/data \
   postgres:16
 ```
 
-### Explanation of flags:
-
-```
--d → run in detached mode (background)
---name → container name
--e POSTGRES_USER → database username
--e POSTGRES_PASSWORD → password
--e POSTGRES_DB → database name
--p 5432:5432 → map container port to host port
--v pgdata:/var/lib/postgresql/data → persist data
+### 2. Verify your `.env` file exists
+```bash
+cat .env
+# Should show dev_user and t_01_enterprise_db_dev
 ```
 
-### Verify PostgreSQL Container
-```
-docker ps
-```
-
-You should see t-01-enterprise-postgres running.
-
-### Connect to Postgres inside the container:
-
-```
-docker exec -it t-01-enterprise-postgres psql -U sabamkcpostgres -d t_01_enterprise_db
+### 3. Run migrations
+```bash
+npm run migrate:up
 ```
 
+### 4. Start development server
+```bash
+npm run dev
+# Server runs on http://localhost:3000 with auto-reload
+```
+
+### Connect to Dev Database:
+```bash
+docker exec -it t-01-enterprise-postgres-dev psql -U dev_user -d t_01_enterprise_db_dev
+```
+
+---
+
+## 🐳 Production Setup (Docker Compose)
+
+### 1. Review `.env.production` file
+```bash
+cat .env.production
+# Should show prod_user and t_01_enterprise_db_prod
+# ⚠️ CHANGE THE PASSWORD BEFORE DEPLOYING!
+```
+
+### 2. Start entire production stack
+```bash
+docker compose up --build
+
+# Or run in background
+docker compose up -d --build
+```
+
+This automatically:
+- Creates `t_01_enterprise_db_prod` database
+- Runs migrations
+- Starts the API server
+
+### 3. Test the production API
+```bash
+curl http://localhost:3000/health
+curl http://localhost:3000/api/menu-items
+```
+
+### Connect to Prod Database:
+```bash
+docker compose exec postgres psql -U prod_user -d t_01_enterprise_db_prod
+```
+
+---
 
 ### Test SQL command:
 
