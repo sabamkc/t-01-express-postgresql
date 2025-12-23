@@ -10,7 +10,7 @@ RUN npm install --only=production
 
 COPY src ./src
 COPY migrations ./migrations
-COPY database.json ./
+COPY database.json.example ./database.json
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
